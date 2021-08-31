@@ -9,7 +9,8 @@
                  [ch.qos.logback/logback-classic "1.1.3"]
                  [com.climate/claypoole "1.1.4"]
                  [selmer "1.12.44"]]
-  :plugins [[jonase/eastwood "0.9.9"]]
+  :plugins [[jonase/eastwood "0.9.9"]
+            [lein-cloverage "1.2.2"]]
   :min-lein-version "2.0.0"
   :jvm-opts ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]
   :main babe.core

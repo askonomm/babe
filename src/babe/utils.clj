@@ -1,6 +1,7 @@
 (ns babe.utils
   (:require [clojure.string :as str]
-            [clojure.instant :as inst]))
+            [clojure.instant :as inst]
+            [clojure.java.io :as io]))
 
 (defn triml [string trim-char]
   (if (clojure.string/starts-with? string trim-char)
@@ -37,3 +38,18 @@
   "Lorem ipsum dolor sit amet."
   [contents]
   (str/trim (str/replace contents #"(?s)^---(.*?)---*" "")))
+
+(defn scan
+  [directory when-pred]
+  (flatten
+    (for
+      [file (.list (io/file directory))
+       :let [read-dir (trimr directory "/")
+             path (str read-dir "/" file)]
+       :when (when-pred read-dir path)]
+      (if (.isDirectory (io/file path))
+        (scan path when-pred)
+        {:path  (-> path
+                    (triml "/")
+                    (trimr "/"))
+         :mtime (.lastModified (io/file path))}))))

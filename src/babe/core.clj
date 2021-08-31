@@ -7,40 +7,48 @@
             [babe.utils :as utils])
   (:gen-class))
 
-(defn- scan
+(defn- scan-assets
+  "Recursively scans a given `base-directory` for any asset files
+   like CSS, JS, images, etc."
+  [base-directory]
+  (utils/scan base-directory
+              (fn [read-dir current-path]
+                (and (not (= current-path (str read-dir "/public")))
+                     (or (str/ends-with? current-path ".css")
+                         (str/ends-with? current-path ".js")
+                         (str/ends-with? current-path ".png")
+                         (str/ends-with? current-path ".jpg")
+                         (str/ends-with? current-path ".jpeg")
+                         (str/ends-with? current-path ".gif")
+                         (str/ends-with? current-path ".webp")
+                         (.isDirectory (io/file current-path)))))))
+
+(defn- scan-content
   "Recursively scans a given `base-directory` for any .md or .html
   files. Then returns a vector of maps, each map containing the file
   path and modified time. The modified time is used by the watcher
   to know if files have changed, so that it could re-build automatically."
   [base-directory]
-  (flatten
-    (for
-      [file (.list (io/file base-directory))
-       :let [read-dir (utils/trimr base-directory "/")
-             path (str read-dir "/" file)]
-       :when (and (not (= path (str read-dir "/public")))
-                  (not (= path (str read-dir "/layout.sel")))
-                  (or (str/ends-with? path ".md")
-                      (str/ends-with? path ".sel")
-                      (.isDirectory (io/file path))))]
-      (if (.isDirectory (io/file path))
-        (scan path)
-        {:path  (utils/triml path "/")
-         :mtime (.lastModified (io/file path))}))))
+  (utils/scan base-directory
+              (fn [read-dir current-path]
+                (and (not (= current-path (str read-dir "/public")))
+                     (not (= current-path (str read-dir "/layout.sel")))
+                     (or (str/ends-with? current-path ".md")
+                         (str/ends-with? current-path ".sel")
+                         (.isDirectory (io/file current-path)))))))
 
-(defn- build-content-item->md
-  "Builds the data structure for a Markdown file by taking the file
+(defn- construct-content-item->md
+  "Constructs the data structure for a Markdown file by taking the file
   `contents` and parsing it for YAML metadata and Markdown data."
   [base-directory path contents]
   {:path  (-> path
               (str/replace base-directory "")
-              (utils/triml "/")
               (str/replace ".md" ""))
    :meta  (utils/parse-md-metadata contents)
    :entry (utils/parse-md-entry contents)})
 
-(defn- build-content-item->sel
-  "Builds the data structure for a Selmer file. Unlike a
+(defn- construct-content-item->sel
+  "Constructs the data structure for a Selmer file. Unlike a
   Markdown file, we will not be creating a index.html file to
   put the rendered contents into, but rather just remove the .sel
   extension and create a file based on the content file name itself,
@@ -48,49 +56,48 @@
   [base-directory path contents]
   {:path     (-> path
                  (str/replace base-directory "")
-                 (utils/triml "/")
                  (str/replace ".sel" ""))
    :selmer   true
    :contents contents})
 
-(defn- build-content-item
+(defn- construct-content-item
   "Build a content item depending on the extension of the file.
   Currently supports .md for Markdown and .sel for Selmer."
   [base-directory {:keys [path]}]
   (let [contents (slurp path)]
     (cond (str/ends-with? path ".md")
-          (build-content-item->md base-directory path contents)
+          (construct-content-item->md base-directory path contents)
           (str/ends-with? path ".sel")
-          (build-content-item->sel base-directory path contents))))
+          (construct-content-item->sel base-directory path contents))))
 
-(defn- build-content
+(defn- construct-content
   "Iterates over each scanned file and returns a collection of
-  built content items."
+  constructed content items."
   [base-directory]
   (pmap (fn [file]
-          (build-content-item base-directory file))
-        (scan base-directory)))
+          (construct-content-item base-directory file))
+        (scan-content base-directory)))
 
-(defn- build-templating-data-item
+(defn- construct-templating-data-item
   "Builds a templating data item, which is a collection of content
   items from a specified folder. Optionally sorted and ordered, and
   returned as a key-value map to be consumed a Selmer template."
   [base-directory data-item]
   {(keyword (:name data-item))
    (cond->> (-> (str (utils/trimr base-directory "/") "/" (:folder data-item))
-                (build-content))
+                (construct-content))
             (:sortBy data-item)
             (sort-by #(get-in % [:meta (keyword (:sortBy data-item))]))
             (= "desc" (:order data-item))
             (reverse))})
 
-(defn- build-templating-data
+(defn- construct-templating-data
   "Builds the templating data from the given configuration and
   data-set defined in the babe.json file, allowing for pretty
   dynamic use."
   [base-directory config]
   {:site (:site config)
-   :data (into {} (map #(build-templating-data-item base-directory %)
+   :data (into {} (map #(construct-templating-data-item base-directory %)
                        (:data config)))})
 
 (defn- get-template
@@ -155,43 +162,52 @@
     (write->md! base-directory layout content-item data)))
 
 (defn- build-home!
-  "Builds a home page / root page (/index.html) into the /public directory."
+  "Builds a home page / root page (/index.html) into the /public directory.
+
+  This will be always called, except for when there is a index.html.sel in
+  the root directory, in which case that will be the home page instead."
   [base-directory layout data]
   (let [home-data (merge {:is_home true} data)
         home-content-item {:contents layout
                            :path     "index.html"}]
+    (println "Building /")
     (write->sel! base-directory home-content-item home-data)))
 
 (defn- build-content!
   "Builds all of the content files into the /public directory."
   [base-directory layout content data]
   (cp/pdoseq :builtin [content-item content]
+             (println "Building" (:path content-item))
              (write! base-directory layout content-item data)))
 
-(defn- move-css!
-  "Moves all of the CSS files into the /public directory."
-  [base-directory])
-
-(defn- move-js!
-  "Moves all of the JS files into the /public directory."
-  [base-directory])
+(defn- copy-assets!
+  [base-directory]
+  (cp/pdoseq
+    :builtin
+    [file (scan-assets base-directory)]
+    (let [write-dir (utils/trimr base-directory "/")
+          from (io/file (:path file))
+          file-path (-> (:path file)
+                        (str/replace base-directory "")
+                        (utils/triml "/"))
+          to (io/file (str write-dir "/public/" file-path))]
+      (println "Copying" file-path)
+      (io/copy from to))))
 
 (defn- build!
   [base-directory config]
-  (let [content (build-content base-directory)
-        data (build-templating-data base-directory config)
+  (let [content (construct-content base-directory)
+        data (construct-templating-data base-directory config)
         layout (get-template base-directory "layout")]
     (build-home! base-directory layout data)
     (build-content! base-directory layout content data)
-    (move-css! base-directory)
-    (move-js! base-directory)))
+    (copy-assets! base-directory)))
 
 (defn- watch!
   [base-directory config]
-  (println "Watching ...")
-  (let [watch-list (atom (scan base-directory))]
+  (let [watch-list (atom (scan-content base-directory))]
     (repeatedly
-      #(let [new-watch-list (scan base-directory)]
+      #(let [new-watch-list (scan-content base-directory)]
          (when (not (= @watch-list new-watch-list))
            (build! base-directory config)
            (reset! watch-list new-watch-list))
