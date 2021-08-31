@@ -206,15 +206,22 @@
 (defn- watch!
   [base-directory config]
   (let [watch-list (atom (scan-content base-directory))]
-    (repeatedly
-      #(let [new-watch-list (scan-content base-directory)]
-         (when (not (= @watch-list new-watch-list))
-           (build! base-directory config)
-           (reset! watch-list new-watch-list))
-         (Thread/sleep 1000)))))
+    (println "Watching ...")
+    (future
+      (while true
+        (let [new-watch-list (scan-content base-directory)]
+          (when (not (= @watch-list new-watch-list))
+            (build! base-directory config)
+            (reset! watch-list new-watch-list))
+          (Thread/sleep 1000))))))
 
 (defn -main
   [& args]
-  (let [base-directory "../bien.ee"
+  (let [watching? (contains? (set args) "watch")
+        base-directory "./"
         config (get-config base-directory)]
-    (build! base-directory config)))
+    (if watching?
+      (watch! base-directory config)
+      (do
+        (build! base-directory config)
+        (System/exit 0)))))

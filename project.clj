@@ -10,11 +10,19 @@
                  [com.climate/claypoole "1.1.4"]
                  [selmer "1.12.44"]]
   :plugins [[jonase/eastwood "0.9.9"]
-            [lein-cloverage "1.2.2"]]
+            [lein-cloverage "1.2.2"]
+            [lein-shell "0.5.0"]]
+  :aliases
+  {"native"
+   ["shell"
+    "native-image" "--report-unsupported-elements-at-runtime"
+    "-jar" "./target/babe.jar"
+    "-H:Name=./target/babe"]}
   :min-lein-version "2.0.0"
   :jvm-opts ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]
   :main babe.core
   :repl-options {:init-ns babe.core}
   :aot :all
   :uberjar-name "babe.jar"
+  :profiles {:uberjar {:aot :all}}
   :omit-source true)
