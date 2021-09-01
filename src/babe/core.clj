@@ -93,18 +93,32 @@
           (construct-content-item base-directory file))
         (scan-content base-directory)))
 
+(defn- prepend-folder-to-content-item-path
+  "Prepends a given `folder` to the :path of each of the items
+  in `content`"
+  [folder content]
+  (map (fn [content-item]
+         (merge content-item
+                {:path (str folder "/" (:path content-item))}))
+       content))
+
 (defn- construct-templating-data-item
   "Builds a templating data item, which is a collection of content
   items from a specified folder. Optionally sorted and ordered, and
   returned as a key-value map to be consumed a Selmer template."
   [base-directory data-item]
-  {(keyword (:name data-item))
-   (cond->> (-> (str (utils/trimr base-directory "/") "/" (:folder data-item))
-                (construct-content))
-            (:sortBy data-item)
-            (sort-by #(get-in % [:meta (keyword (:sortBy data-item))]))
-            (= "desc" (:order data-item))
-            (reverse))})
+  (let [folder (-> (:folder data-item)
+                   (utils/triml "/")
+                   (utils/trimr "/"))
+        content (->> (str (utils/trimr base-directory "/") "/" folder)
+                     (construct-content)
+                     (prepend-folder-to-content-item-path folder))]
+    {(keyword (:name data-item))
+     (cond->> content
+              (:sortBy data-item)
+              (sort-by #(get-in % [:meta (keyword (:sortBy data-item))]))
+              (= "desc" (:order data-item))
+              (reverse))}))
 
 (defn- construct-templating-data
   "Builds the templating data from the given configuration and
