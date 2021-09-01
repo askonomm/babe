@@ -1,7 +1,8 @@
 (ns babe.utils
   (:require [clojure.string :as str]
             [clojure.instant :as inst]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [markdown.core :as md]))
 
 (defn triml [string trim-char]
   (if (clojure.string/starts-with? string trim-char)
@@ -37,7 +38,10 @@
 (defn parse-md-entry
   "Lorem ipsum dolor sit amet."
   [contents]
-  (str/trim (str/replace contents #"(?s)^---(.*?)---*" "")))
+  (-> contents
+      (str/replace #"(?s)^---(.*?)---*" "")
+      (str/trim)
+      (md/md-to-html-string)))
 
 (defn scan
   [directory when-pred]

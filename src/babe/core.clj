@@ -2,14 +2,19 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.data.json :as json]
-            [com.climate.claypoole :as cp]
             [selmer.parser :as selmer]
+            [selmer.util :as selmer.util]
             [babe.utils :as utils])
   (:gen-class))
 
+; By default, Selmer escapes all HTML entities.
+; We don't want that.
+(selmer.util/turn-off-escaping!)
+
 (defn- scan-assets
   "Recursively scans a given `base-directory` for any asset files
-   like CSS, JS, images, etc."
+   like CSS, JS, images, etc. The result of this is used to know
+   which files to copy to the /public directory."
   [base-directory]
   (utils/scan base-directory
               (fn [read-dir current-path]
@@ -25,9 +30,7 @@
 
 (defn- scan-content
   "Recursively scans a given `base-directory` for any .md or .html
-  files. Then returns a vector of maps, each map containing the file
-  path and modified time. The modified time is used by the watcher
-  to know if files have changed, so that it could re-build automatically."
+  files. The result of this is used for generating content files."
   [base-directory]
   (utils/scan base-directory
               (fn [read-dir current-path]
@@ -37,12 +40,23 @@
                          (str/ends-with? current-path ".sel")
                          (.isDirectory (io/file current-path)))))))
 
+(defn- scan-watchlist
+  "Recursively scans a given `base-directory` for any and all files,
+  except those in the /public directory. The result of this is used
+  by the watcher to know when any file was modified, to then trigger
+  a re-build."
+  [base-directory]
+  (utils/scan base-directory
+              (fn [read-dir current-path]
+                (not (= current-path (str read-dir "/public"))))))
+
 (defn- construct-content-item->md
   "Constructs the data structure for a Markdown file by taking the file
   `contents` and parsing it for YAML metadata and Markdown data."
   [base-directory path contents]
   {:path  (-> path
               (str/replace base-directory "")
+              (utils/triml "/")
               (str/replace ".md" ""))
    :meta  (utils/parse-md-metadata contents)
    :entry (utils/parse-md-entry contents)})
@@ -56,6 +70,7 @@
   [base-directory path contents]
   {:path     (-> path
                  (str/replace base-directory "")
+                 (utils/triml "/")
                  (str/replace ".sel" ""))
    :selmer   true
    :contents contents})
@@ -149,23 +164,27 @@
 
 (defn- write!
   "Writes a given `content-item` into the /public directory based on
-  its path and filename of the file. Depending on whether or not it is
-  a Selmer template or a Markdown content file, a different strategy
-  will be chosen.
+  its path and filename of the file. Depending on whether or not it
+  is a Selmer template or a Markdown content file, a different
+  strategy will be chosen.
 
-  A Selmer template will be rendered as-is, fused with `data`, and thus
-  will be dynamic - while a Markdown content file will be rendered into
-  the given `layout` (which in itself is a Selmer template) and is static."
+  A Selmer template will be rendered as-is, fused with `data`, and
+  thus will be dynamic - while a Markdown content file will be
+  rendered into the given `layout` (which in itself is a Selmer template)
+  and is static."
   [base-directory layout content-item data]
   (if (:selmer content-item)
     (write->sel! base-directory content-item data)
     (write->md! base-directory layout content-item data)))
 
 (defn- build-home!
-  "Builds a home page / root page (/index.html) into the /public directory.
+  "Builds a home page / root page (index.html) into the /public
+  directory which is simply the `layout` merged with given `data`,
+  and provides the `is_home` template variable to be used from `layout`
+  for knowing whether we are dealing with a home page.
 
-  This will be always called, except for when there is a index.html.sel in
-  the root directory, in which case that will be the home page instead."
+  This will be overwritten if there is an index.html.sel file in the
+  root directory."
   [base-directory layout data]
   (let [home-data (merge {:is_home true} data)
         home-content-item {:contents layout
@@ -174,17 +193,15 @@
     (write->sel! base-directory home-content-item home-data)))
 
 (defn- build-content!
-  "Builds all of the content files into the /public directory."
+  "Builds all the content files into the /public directory."
   [base-directory layout content data]
-  (cp/pdoseq :builtin [content-item content]
-             (println "Building" (:path content-item))
-             (write! base-directory layout content-item data)))
+  (doseq [content-item content]
+    (println "Building" (:path content-item))
+    (write! base-directory layout content-item data)))
 
 (defn- copy-assets!
   [base-directory]
-  (cp/pdoseq
-    :builtin
-    [file (scan-assets base-directory)]
+  (doseq [file (scan-assets base-directory)]
     (let [write-dir (utils/trimr base-directory "/")
           from (io/file (:path file))
           file-path (-> (:path file)
@@ -204,24 +221,23 @@
     (copy-assets! base-directory)))
 
 (defn- watch!
-  [base-directory config]
-  (let [watch-list (atom (scan-content base-directory))]
+  [base-directory]
+  (let [watch-list (atom (scan-watchlist base-directory))]
     (println "Watching ...")
     (future
       (while true
-        (let [new-watch-list (scan-content base-directory)]
+        (let [new-watch-list (scan-watchlist base-directory)]
           (when (not (= @watch-list new-watch-list))
-            (build! base-directory config)
+            (build! base-directory (get-config base-directory))
             (reset! watch-list new-watch-list))
           (Thread/sleep 1000))))))
 
 (defn -main
   [& args]
   (let [watching? (contains? (set args) "watch")
-        base-directory "./"
-        config (get-config base-directory)]
+        base-directory "./"]
     (if watching?
-      (watch! base-directory config)
+      (watch! base-directory)
       (do
-        (build! base-directory config)
-        (System/exit 0)))))
+        (build! base-directory (get-config base-directory))
+        (System/exit 1)))))
