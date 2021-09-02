@@ -17,7 +17,7 @@
   {"native"
    ["shell"
     "native-image" "--report-unsupported-elements-at-runtime"
-    "--initialize-at-build-time"
+    "--initialize-at-build-time=clojure,selmer,nrepl.middleware,nrepl,flatland.ordered,markdown,complete,cursive.repl,cursive.repl.runtime,clj_yaml,babe"
     "-jar" "./target/babe.jar"
     "-H:Name=./target/babe"]}
   :min-lein-version "2.0.0"

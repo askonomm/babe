@@ -11,6 +11,21 @@
 ; We don't want that.
 (selmer.util/turn-off-escaping!)
 
+; This here may seem unused, but trust me, it isn't. Since we use
+; GraalVM to create a native binary of Babe, we need to provide it
+; a list of all packages so that it would know what to load for us
+; in the classpath. I use this var from the REPL to get a list of
+; those packages.
+(def ^:private packages
+  (->> (map ns-name (all-ns))
+       (remove #(str/starts-with? % "clojure"))
+       (map #(str/split (str %) #"\."))
+       (keep butlast)
+       (map #(str/join "." %))
+       distinct
+       (map munge)
+       (cons "clojure")))
+
 (defn- scan-assets
   "Recursively scans a given `base-directory` for any asset files
    like CSS, JS, images, etc. The result of this is used to know
