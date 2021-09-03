@@ -7,6 +7,8 @@
             [babe.utils :as utils])
   (:gen-class))
 
+(set! *warn-on-reflection* true)
+
 ; By default, Selmer escapes all HTML entities.
 ; We don't want that.
 (selmer.util/turn-off-escaping!)

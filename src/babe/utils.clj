@@ -2,7 +2,8 @@
   (:require [clojure.string :as str]
             [clojure.instant :as inst]
             [clojure.java.io :as io]
-            [markdown.core :as md]))
+            [markdown.core :as md])
+  (:import (java.io File)))
 
 (defn triml [string trim-char]
   (if (clojure.string/starts-with? string trim-char)
@@ -61,6 +62,6 @@
 (defn delete-files-in-path!
   [path]
   (doseq [file-in-dir (.listFiles (io/file path))]
-    (if (.isDirectory file-in-dir)
-      (delete-files-in-path! (.getPath file-in-dir))
+    (if (.isDirectory ^File file-in-dir)
+      (delete-files-in-path! (.getPath ^File file-in-dir))
       (io/delete-file file-in-dir))))
