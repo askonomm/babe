@@ -59,8 +59,8 @@
          :mtime (.lastModified (io/file path))}))))
 
 (defn delete-files-in-path!
-  [file]
-  (when (.isDirectory file)
-    (doseq [file-in-dir (.listFiles file)]
-      (delete-files-in-path! file-in-dir)))
-  (io/delete-file file))
+  [path]
+  (doseq [file-in-dir (.listFiles (io/file path))]
+    (if (.isDirectory file-in-dir)
+      (delete-files-in-path! (.getPath file-in-dir))
+      (io/delete-file file-in-dir))))
