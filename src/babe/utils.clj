@@ -50,10 +50,17 @@
       [file (.list (io/file directory))
        :let [read-dir (trimr directory "/")
              path (str read-dir "/" file)]
-       :when (when-pred read-dir path)]
+       :when (when-pred read-dir (str/lower-case path))]
       (if (.isDirectory (io/file path))
         (scan path when-pred)
         {:path  (-> path
                     (triml "/")
                     (trimr "/"))
          :mtime (.lastModified (io/file path))}))))
+
+(defn delete-files-in-path!
+  [file]
+  (when (.isDirectory file)
+    (doseq [file-in-dir (.listFiles file)]
+      (delete-files-in-path! file-in-dir)))
+  (io/delete-file file))

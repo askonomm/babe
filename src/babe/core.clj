@@ -206,6 +206,14 @@
     (write->sel! base-directory content-item data)
     (write->md! base-directory layout content-item data)))
 
+(defn- delete-public-dir!
+  "Recursively deletes all files and directories from within the
+  public directory."
+  [base-directory]
+  (-> (str (utils/trimr base-directory "/") "/public")
+      (io/file)
+      (utils/delete-files-in-path!)))
+
 (defn- build-home!
   "Builds a home page / root page (index.html) into the /public
   directory which is simply the `layout` merged with given `data`,
@@ -238,6 +246,7 @@
                         (utils/triml "/"))
           to (io/file (str write-dir "/public/" file-path))]
       (println "Copying" file-path)
+      (io/make-parents (str write-dir "/public/" file-path))
       (io/copy from to))))
 
 (defn- build!
@@ -245,6 +254,7 @@
   (let [content (construct-content base-directory)
         data (construct-templating-data base-directory config)
         layout (get-template base-directory "layout")]
+    (delete-public-dir! base-directory)
     (build-home! base-directory layout data)
     (build-content! base-directory layout content data)
     (copy-assets! base-directory)))
