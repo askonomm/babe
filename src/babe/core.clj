@@ -231,13 +231,15 @@
     (write->sel! base-directory home-content-item home-data)))
 
 (defn- build-content!
-  "Builds all the content files into the /public directory."
+  "Builds all the given `content` into the /public directory."
   [base-directory layout content data]
   (doseq [content-item content]
     (println "Building" (:path content-item))
     (write! base-directory layout content-item data)))
 
 (defn- copy-assets!
+  "Copies all the assets from the `base-directory` to the
+  /public directory."
   [base-directory]
   (doseq [file (scan-assets base-directory)]
     (let [write-dir (utils/trimr base-directory "/")
@@ -251,6 +253,7 @@
       (io/copy from to))))
 
 (defn- build!
+  "Builds the static site in `base-directory` with `config`."
   [base-directory config]
   (let [content (construct-content base-directory)
         data (construct-templating-data base-directory config)
@@ -261,6 +264,8 @@
     (copy-assets! base-directory)))
 
 (defn- watch!
+  "Runs a infinite loop that checks every 1s for any changes
+  to files, upon which it will call `(build!)`."
   [base-directory]
   (let [watch-list (atom (scan-watchlist base-directory))]
     (println "Watching ...")
