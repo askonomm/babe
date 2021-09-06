@@ -24,6 +24,28 @@ jobs:
           cli: 1.10.1.693
           lein: 2.9.1
 
+      - name: 'Setup GraalVM Environment'
+        uses: DeLaGuardo/setup-graalvm@4.0
+        with:
+          graalvm-version: '21.0.0.2.java11'
+
+      - name: 'Install Native Image Plugin'
+        run: |
+          gu install native-image
+
       - name: Build a uberjar
         run: lein uberjar
+
+      - name: Build a native image
+        run: |
+          lein native
+
+      - name: Publish native image
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: 'babe-${{ matrix.os }}'
+          path: 'target/babe'
+
+
+
 
