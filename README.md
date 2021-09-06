@@ -6,11 +6,23 @@ JSON configuration to do that.
 
 ## Install
 
-To-do.
+To install Babe locally, run:
+
+```shell
+curl -s https://raw.githubusercontent.com/askonomm/babe/master/installer.sh | bash -s
+```
+
+And to install globally, run:
+
+```shell
+curl -s https://raw.githubusercontent.com/askonomm/babe/master/installer.sh | bash -s -- -g
+```
 
 ## Usage
 
-To-do.
+To build a Babe site once you have Babe installed is to simply run `babe` in the directory where said site is (where
+your babe.json file is). If you wish Babe to listen for any file changes and automatically build the site (useful for
+developing) then run `babe watch` instead.
 
 ## Build it yourself
 
