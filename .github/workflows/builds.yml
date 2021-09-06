@@ -1,4 +1,4 @@
-name: Create Builds
+name: Builds
 on: [ workflow_dispatch ]
 jobs:
   build-jar:
@@ -124,6 +124,65 @@ jobs:
           asset_name: babe-linux
           asset_content_type: application/octet-stream
 
+  build-native-image-macos:
+    needs: [ build-jar ]
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
 
+      - name: Prepare Java
+        uses: actions/setup-java@v2
+        with:
+          distribution: 'zulu'
+          java-version: '11'
 
+      - name: Install Clojure Tools
+        uses: DeLaGuardo/setup-clojure@3.5
+        with:
+          cli: 1.10.1.693
+          lein: 2.9.1
 
+      - name: 'Setup GraalVM Environment'
+        uses: DeLaGuardo/setup-graalvm@4.0
+        with:
+          graalvm-version: '21.0.0.2.java11'
+
+      - name: 'Install Native Image Plugin'
+        run: |
+          gu install native-image
+
+      - name: 'Get JAR artifact'
+        uses: actions/download-artifact@v2-preview
+        with:
+          name: 'babe.jar'
+
+      - name: 'Download Release URL'
+        uses: actions/download-artifact@v2-preview
+        with:
+          name: 'upload_url.txt'
+
+      - name: 'Set Upload URL Env Var'
+        run: |
+          echo "UPLOAD_URL=$(cat upload_url.txt)" >> $GITHUB_ENV
+
+      - name: Build a native image
+        run: |
+          native-image --report-unsupported-elements-at-runtime --initialize-at-build-time=clojure,selmer,nrepl.middleware,nrepl,flatland.ordered,markdown,complete,cursive.repl,cursive.repl.runtime,clj_yaml,babe -jar babe.jar
+
+      - name: 'Publish native image'
+        uses: actions/upload-artifact@v2-preview
+        with:
+          name: 'babe-macos'
+          path: babe
+
+      - name: 'Upload native image'
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          upload_url: ${{ env.UPLOAD_URL }}
+          asset_path: babe
+          asset_name: babe-linux
+          asset_content_type: application/octet-stream
