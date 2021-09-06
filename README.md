@@ -6,11 +6,13 @@ JSON configuration to do that.
 
 ## Install
 
-To install Babe locally, run:
+### Locally
 
 ```shell
 curl -s https://raw.githubusercontent.com/askonomm/babe/master/installer.sh | bash -s
 ```
+
+You can then run babe as `./babe` or `./babe watch`, given that the Babe executable is in the current working directory.
 
 And to install globally, run:
 
@@ -18,11 +20,20 @@ And to install globally, run:
 curl -s https://raw.githubusercontent.com/askonomm/babe/master/installer.sh | bash -s -- -g
 ```
 
+You can then run babe as `babe` or `babe watch` from anywhere.
+
 ## Usage
 
-To build a Babe site once you have Babe installed is to simply run `babe` in the directory where said site is (where
-your babe.json file is). If you wish Babe to listen for any file changes and automatically build the site (useful for
-developing) then run `babe watch` instead.
+### Building
+
+To build a Babe site, simply navigate to the directory where your Babe site is (where the babe.json file is) and
+run `babe`.
+
+### Watching
+
+To watch a Babe site, which means Babe will listen for any file changes and build the site automatically on any change (
+useful for developing), simply navigate to the directory where your Babe site is (where the babe.json file is) and
+run `babe watch`.
 
 ## Build it yourself
 
@@ -35,7 +46,7 @@ Requires Java 11+, leiningen 2+ and GraalVM with Native Image to be installed.
 Now you have a native binary that you can use. You can, of course, just use the JAR file as well
 via `java -jar babe.jar` if you want.
 
-## Documentation
+## More
 
 - [Check out a sample site](https://github.com/askonomm/bien.ee)
 - [Creating content](#)
