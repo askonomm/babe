@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<module cursive.leiningen.project.LeiningenProjectsManager.displayName="babe:0.1.0-SNAPSHOT" cursive.leiningen.project.LeiningenProjectsManager.isLeinModule="true" type="JAVA_MODULE" version="4">
+<module cursive.leiningen.project.LeiningenProjectsManager.displayName="babe:1.0" cursive.leiningen.project.LeiningenProjectsManager.isLeinModule="true" type="JAVA_MODULE" version="4">
   <component name="NewModuleRootManager">
     <output url="file://$MODULE_DIR$/target/classes" />
     <output-test url="file://$MODULE_DIR$/target/classes" />
@@ -17,7 +17,6 @@
     <orderEntry type="library" name="Leiningen: ch.qos.logback/logback-core:1.1.3" level="project" />
     <orderEntry type="library" name="Leiningen: clj-commons/clj-yaml:0.7.107" level="project" />
     <orderEntry type="library" name="Leiningen: clojure-complete:0.2.5" level="project" />
-    <orderEntry type="library" name="Leiningen: com.climate/claypoole:1.1.4" level="project" />
     <orderEntry type="library" name="Leiningen: markdown-clj:1.10.6" level="project" />
     <orderEntry type="library" name="Leiningen: nrepl:0.6.0" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/clojure:1.10.1" level="project" />

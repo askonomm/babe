@@ -264,7 +264,7 @@
     (copy-assets! base-directory)))
 
 (defn- watch!
-  "Runs a infinite loop that checks every 1s for any changes
+  "Runs an infinite loop that checks every 1s for any changes
   to files, upon which it will call `(build!)`."
   [base-directory]
   (let [watch-list (atom (scan-watchlist base-directory))]
