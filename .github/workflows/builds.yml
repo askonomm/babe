@@ -184,5 +184,5 @@ jobs:
         with:
           upload_url: ${{ env.UPLOAD_URL }}
           asset_path: babe
-          asset_name: babe-linux
+          asset_name: babe-macos
           asset_content_type: application/octet-stream
