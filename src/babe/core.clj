@@ -285,4 +285,4 @@
       (watch! base-directory)
       (do
         (build! base-directory (get-config base-directory))
-        (System/exit 1)))))
+        (System/exit 0)))))
