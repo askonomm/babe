@@ -1,4 +1,4 @@
-name: Builds
+name: Create distributables
 on: [ workflow_dispatch ]
 jobs:
   build-jar:
