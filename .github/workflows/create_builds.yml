@@ -39,12 +39,36 @@ jobs:
       - name: Build a native image
         run: |
           lein native
-
-      - name: Publish native image
+          
+      - name: 'Publish native image'
         uses: actions/upload-artifact@v2-preview
         with:
           name: 'babe-${{ matrix.os }}'
-          path: 'target/babe'
+          path: target/babe
+          
+      - name: 'Create Release'
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          tag_name: draft_release
+          release_name: draft_release
+          body: |
+            This release is created automatically.
+          draft: true
+          prerelease: false
+          
+      - name: 'Upload Release Asset'
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+        with:
+          upload_url: ${{steps.create_release.outputs.upload_url}}
+          asset_path: target/babe
+          asset_name: babe-${{ matrix.os }}
+          asset_content_type: application/octet-stream
 
 
 
