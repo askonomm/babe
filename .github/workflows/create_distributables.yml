@@ -29,6 +29,7 @@ jobs:
           path: target/babe.jar
 
       - name: Get current date
+        id: date
         run: echo "::set-output name=date::$(date +'%Y-%m-%d')"
 
       - name: 'Create Release'
