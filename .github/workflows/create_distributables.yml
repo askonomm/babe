@@ -105,7 +105,10 @@ jobs:
 
       - name: Build a native image
         run: |
-          native-image --no-fallback --report-unsupported-elements-at-runtime --initialize-at-build-time=clojure,selmer,flatland.ordered,org.httpkit,markdown,complete,clj_yaml,babe --initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory\\$SSLHolder -jar babe.jar
+          native-image --report-unsupported-elements-at-runtime \
+              --initialize-at-build-time=clojure,selmer,flatland.ordered,org.httpkit,markdown,complete,clj_yaml,babe --no-fallback \
+              --initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory\\$SSLHolder \
+              -jar babe.jar
 
       - name: 'Publish native image'
         uses: actions/upload-artifact@v2-preview
@@ -168,8 +171,11 @@ jobs:
 
       - name: Build a native image
         run: |
-          native-image --no-fallback --report-unsupported-elements-at-runtime --initialize-at-build-time=clojure,selmer,flatland.ordered,org.httpkit,markdown,complete,clj_yaml,babe --initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory\\$SSLHolder -jar babe.jar
-
+          native-image --report-unsupported-elements-at-runtime \
+                        --initialize-at-build-time=clojure,selmer,flatland.ordered,org.httpkit,markdown,complete,clj_yaml,babe --no-fallback \
+                        --initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory\\$SSLHolder \
+                        -jar babe.jar
+          
       - name: 'Publish native image'
         uses: actions/upload-artifact@v2-preview
         with:
