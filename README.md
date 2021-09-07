@@ -24,6 +24,11 @@ You can then run babe as `babe` or `babe watch` from anywhere.
 
 ## Usage
 
+### Quick start
+
+To get a quick start for your project, run `babe init` in a directory you want and it will create
+the [base project](https://github.com/askonomm/babe-base-project) files for you in that directory.
+
 ### Building
 
 To build a Babe site, simply navigate to the directory where your Babe site is (where the babe.json file is) and

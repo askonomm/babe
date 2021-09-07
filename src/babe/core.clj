@@ -2,10 +2,14 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.data.json :as json]
+            [clojure.java.shell :refer [sh]]
             [selmer.parser :as selmer]
             [selmer.util :as selmer.util]
-            [babe.utils :as utils])
-  (:gen-class))
+            [babe.utils :as utils]
+            [org.httpkit.client :as client])
+  (:gen-class)
+  (:import (java.io File)
+           (java.util.zip ZipInputStream)))
 
 (set! *warn-on-reflection* true)
 
@@ -27,6 +31,9 @@
        distinct
        (map munge)
        (cons "clojure")))
+
+(def ^:private base-project-zip-url
+  "https://github.com/askonomm/babe-base-project/archive/refs/heads/master.zip")
 
 (defn- scan-assets
   "Recursively scans a given `base-directory` for any asset files
@@ -263,6 +270,27 @@
     (build-content! base-directory layout content data)
     (copy-assets! base-directory)))
 
+(defn create-base-project!
+  "Download a `base-project-zip-url` and extracts the contents
+  into `base-directory`."
+  [base-directory]
+  (with-open [stream (-> @(client/request {:url base-project-zip-url
+                                           :as  :stream})
+                         (:body)
+                         (ZipInputStream.))]
+    (loop [entry (.getNextEntry stream)]
+      (when entry
+        (let [savePath (-> (str base-directory File/separatorChar (.getName entry))
+                           (str/replace "babe-base-project-master/" ""))
+              saveFile (File. savePath)]
+          (if (.isDirectory entry)
+            (if-not (.exists saveFile)
+              (.mkdirs saveFile))
+            (let [parentDir (File. (.substring savePath 0 (.lastIndexOf savePath (int File/separatorChar))))]
+              (if-not (.exists parentDir) (.mkdirs parentDir))
+              (clojure.java.io/copy stream saveFile)))
+          (recur (.getNextEntry stream)))))))
+
 (defn- watch!
   "Runs an infinite loop that checks every 1s for any changes
   to files, upon which it will call `(build!)`."
@@ -280,9 +308,13 @@
 (defn -main
   [& args]
   (let [watching? (contains? (set args) "watch")
+        init? (contains? (set args) "init")
         base-directory "./"]
-    (if watching?
-      (watch! base-directory)
-      (do
-        (build! base-directory (get-config base-directory))
-        (System/exit 0)))))
+    (cond init?
+          (create-base-project! base-directory)
+          watching?
+          (watch! base-directory)
+          :else
+          (do
+            (build! base-directory (get-config base-directory))
+            (System/exit 0)))))
