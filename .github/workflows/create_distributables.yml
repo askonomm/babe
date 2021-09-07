@@ -34,8 +34,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
         with:
-          tag_name: v${{ github.run_number }}
-          release_name: v${{ github.run_number }}
+          tag_name: $(date +'%Y-%m-%d')
+          release_name: $(date +'%Y-%m-%d')
           body: |
             This release is created automatically.
           draft: false
