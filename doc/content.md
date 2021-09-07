@@ -1,6 +1,6 @@
 # Content
 
-There are two content file types in Babe: Markdown and Selmer. Markdown content files must end with an `.md` suffix and Selmer content files must end with `.sel` suffix. 
+There are two content file types in Babe: Markdown content file and Selmer template file. Markdown content files must end with an `.md` suffix and Selmer template files must end with `.sel` suffix. 
 
 ## What's the difference between Markdown and Selmer?
 
@@ -25,7 +25,7 @@ Markdown content files are great for formatted content like blog posts or pages,
 
 ### Selmer
 
-A selmer content file is basically just an HTML file. Thereby it can contain whatever you want, which can be a whole HTML document, enriched with a 
+A Selmer template file is basically just an HTML file. Thereby it can contain whatever you want, which can be a whole HTML document, enriched with a 
 custom design and so forth. But, unlike regular HTML, it comes with superpowers. Namely, [Selmer](https://github.com/yogthos/Selmer) templating. Selmer templating allows you to 
 create content with complex logic based on data available with what you can get pretty creative and create things like RSS feeds, sitemaps and so forth.
 
