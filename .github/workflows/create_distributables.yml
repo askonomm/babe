@@ -107,7 +107,7 @@ jobs:
         run: |
           native-image --report-unsupported-elements-at-runtime \
               --initialize-at-build-time=clojure,selmer,flatland.ordered,org.httpkit,markdown,complete,clj_yaml,babe --no-fallback \
-              --initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory  \
+              --initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory\${{ '$SSLHolder' }}  \
               -jar babe.jar
 
       - name: 'Publish native image'
@@ -173,7 +173,7 @@ jobs:
         run: |
           native-image --report-unsupported-elements-at-runtime \
                         --initialize-at-build-time=clojure,selmer,flatland.ordered,org.httpkit,markdown,complete,clj_yaml,babe --no-fallback \
-                        --initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory  \
+                        --initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory\${{ '$SSLHolder' }}  \
                         -jar babe.jar
 
       - name: 'Publish native image'
