@@ -18,7 +18,7 @@
    ["shell"
     "native-image" "--report-unsupported-elements-at-runtime"
     "--initialize-at-build-time=clojure,selmer,flatland.ordered,org.httpkit,markdown,complete,clj_yaml,babe" "--no-fallback"
-    "--initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory\\$SSLHolder"
+    "--initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory\\$SSLHolder,sun.security.provider.NativePRNG"
     "-jar" "./target/babe.jar"]}
   :min-lein-version "2.0.0"
   :jvm-opts ["-Dclojure.tools.logging.factory=clojure.tools.logging.impl/slf4j-factory"]
