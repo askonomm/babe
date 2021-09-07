@@ -26,7 +26,7 @@ You can then run babe as `babe` or `babe watch` from anywhere.
 
 ### Quick start
 
-To get a quick start for your project, run `babe init` in a directory you want and it will create
+To get a quick start for your project, run `babe init` in a directory you want, and it will create
 the [base project](https://github.com/askonomm/babe-base-project) files for you in that directory.
 
 ### Building
@@ -40,7 +40,7 @@ To watch a Babe site, which means Babe will listen for any file changes and buil
 useful for developing), simply navigate to the directory where your Babe site is (where the babe.json file is) and
 run `babe watch`.
 
-## Build it yourself
+## Compile Babe yourself
 
 Requires Java 11+, leiningen 2+ and GraalVM with Native Image to be installed.
 
@@ -49,10 +49,10 @@ Requires Java 11+, leiningen 2+ and GraalVM with Native Image to be installed.
 3. Run `lein native` to create a native binary file `target/babe`.
 
 Now you have a native binary that you can use. You can, of course, just use the JAR file as well
-via `java -jar babe.jar` if you want.
+via `java -jar babe.jar` if you want, thereby skipping step 3.
 
 ## More
 
 - [Check out a sample site](https://github.com/askonomm/bien.ee)
-- [Creating content](#)
-- [Templating](#)
+- [Creating content](https://github.com/askonomm/babe/blob/master/doc/content.md)
+- [Creating templating data](https://github.com/askonomm/babe/blob/master/doc/templating_data.md)
