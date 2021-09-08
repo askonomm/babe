@@ -273,10 +273,12 @@
 (defn- create-base-project-file!
   "Copies a given `stream` into `base-directory` based on `entry`."
   [base-directory stream ^ZipEntry entry]
-  (let [path  (-> (str base-directory File/separatorChar (.getName entry))
-                  (str/replace "babe-base-project-master/" ""))
+  (let [path (-> (str base-directory "/" (.getName entry))
+                 (str/replace "babe-base-project-master/" ""))
         file (io/file path)]
-    (when-not (.isDirectory entry)
+    (when-not (or (.isDirectory entry)
+                  (= path (str base-directory "/.gitignore"))
+                  (= path (str base-directory "/LICENSE.txt")))
       (io/make-parents path)
       (io/copy stream file))))
 
@@ -285,13 +287,14 @@
   into `base-directory`."
   [base-directory]
   (with-open [stream (-> @(client/request {:url base-project-zip-url
-                                           :as :stream})
+                                           :as  :stream})
                          (:body)
                          (ZipInputStream.))]
     (loop [entry (.getNextEntry stream)]
       (when entry
-        (create-base-project-file! base-directory stream entry)
-        (recur (.getNextEntry stream))))))
+        (let [directory (utils/trimr base-directory "/")]
+          (create-base-project-file! directory stream entry)
+          (recur (.getNextEntry stream)))))))
 
 (defn- watch!
   "Runs an infinite loop that checks every 1s for any changes
