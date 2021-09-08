@@ -9,7 +9,7 @@
             [org.httpkit.client :as client])
   (:gen-class)
   (:import (java.io File)
-           (java.util.zip ZipInputStream)))
+           (java.util.zip ZipInputStream ZipEntry)))
 
 (set! *warn-on-reflection* true)
 
@@ -50,7 +50,7 @@
                          (str/ends-with? current-path ".jpeg")
                          (str/ends-with? current-path ".gif")
                          (str/ends-with? current-path ".webp")
-                         (.isDirectory (io/file current-path)))))))
+                         (.isDirectory ^File (io/file current-path)))))))
 
 (defn- scan-content
   "Recursively scans a given `base-directory` for any .md or .html
@@ -62,7 +62,7 @@
                      (not (= current-path (str read-dir "/layout.sel")))
                      (or (str/ends-with? current-path ".md")
                          (str/ends-with? current-path ".sel")
-                         (.isDirectory (io/file current-path)))))))
+                         (.isDirectory ^File (io/file current-path)))))))
 
 (defn- scan-watchlist
   "Recursively scans a given `base-directory` for any and all files,
@@ -250,11 +250,11 @@
   [base-directory]
   (doseq [file (scan-assets base-directory)]
     (let [write-dir (utils/trimr base-directory "/")
-          from (io/file (:path file))
+          from ^File (io/file (:path file))
           file-path (-> (:path file)
                         (str/replace base-directory "")
                         (utils/triml "/"))
-          to (io/file (str write-dir "/public/" file-path))]
+          to ^File (io/file (str write-dir "/public/" file-path))]
       (println "Copying" file-path)
       (io/make-parents (str write-dir "/public/" file-path))
       (io/copy from to))))
@@ -270,26 +270,28 @@
     (build-content! base-directory layout content data)
     (copy-assets! base-directory)))
 
-(defn create-base-project!
+(defn- create-base-project-file!
+  "Copies a given `stream` into `base-directory` based on `entry`."
+  [base-directory stream ^ZipEntry entry]
+  (let [path  (-> (str base-directory File/separatorChar (.getName entry))
+                  (str/replace "babe-base-project-master/" ""))
+        file (io/file path)]
+    (when-not (.isDirectory entry)
+      (io/make-parents path)
+      (io/copy stream file))))
+
+(defn- create-base-project!
   "Download a `base-project-zip-url` and extracts the contents
   into `base-directory`."
   [base-directory]
   (with-open [stream (-> @(client/request {:url base-project-zip-url
-                                           :as  :stream})
+                                           :as :stream})
                          (:body)
                          (ZipInputStream.))]
     (loop [entry (.getNextEntry stream)]
       (when entry
-        (let [savePath (-> (str base-directory File/separatorChar (.getName entry))
-                           (str/replace "babe-base-project-master/" ""))
-              saveFile (File. savePath)]
-          (if (.isDirectory entry)
-            (if-not (.exists saveFile)
-              (.mkdirs saveFile))
-            (let [parentDir (File. (.substring savePath 0 (.lastIndexOf savePath (int File/separatorChar))))]
-              (if-not (.exists parentDir) (.mkdirs parentDir))
-              (clojure.java.io/copy stream saveFile)))
-          (recur (.getNextEntry stream)))))))
+        (create-base-project-file! base-directory stream entry)
+        (recur (.getNextEntry stream))))))
 
 (defn- watch!
   "Runs an infinite loop that checks every 1s for any changes
