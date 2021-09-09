@@ -2,7 +2,6 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [clojure.data.json :as json]
-            [clojure.java.shell :refer [sh]]
             [selmer.parser :as selmer]
             [selmer.util :as selmer.util]
             [babe.utils :as utils]
@@ -139,10 +138,10 @@
                      (prepend-folder-to-content-item-path folder))]
     {(keyword (:name data-item))
      (cond->> content
-              (:sortBy data-item)
-              (sort-by #(get-in % [:meta (keyword (:sortBy data-item))]))
-              (= "desc" (:order data-item))
-              (reverse))}))
+       (:sortBy data-item)
+       (sort-by #(get-in % [:meta (keyword (:sortBy data-item))]))
+       (= "desc" (:order data-item))
+       (reverse))}))
 
 (defn- construct-templating-data
   "Builds the templating data from the given configuration and
@@ -270,6 +269,11 @@
     (build-content! base-directory layout content data)
     (copy-assets! base-directory)))
 
+(defn- build-and-exit!
+  "Builds the static site in `base-directory` and exits."
+  [base-directory]
+  (build! base-directory (get-config base-directory)))
+
 (defn- create-base-project-file!
   "Copies a given `stream` into `base-directory` based on `entry`."
   [base-directory stream ^ZipEntry entry]
@@ -312,14 +316,9 @@
 
 (defn -main
   [& args]
-  (let [watching? (contains? (set args) "watch")
-        init? (contains? (set args) "init")
-        base-directory "./"]
-    (cond init?
+  (let [base-directory (or (utils/argcmd "dir" args) "./")]
+    (cond (= true (utils/argcmd "init" args))
           (create-base-project! base-directory)
-          watching?
+          (utils/argcmd "watch" args)
           (watch! base-directory)
-          :else
-          (do
-            (build! base-directory (get-config base-directory))
-            (System/exit 0)))))
+          :else (build-and-exit! base-directory))))

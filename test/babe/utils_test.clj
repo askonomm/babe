@@ -56,3 +56,17 @@
     (let [result (parse-md-entry "")
           expected ""]
       (is (= expected result)))))
+
+(deftest argcmd-test
+  (testing "Passing a command"
+    (let [result (argcmd "command" (list "command"))
+          expected true]
+      (is (= expected result))))
+  (testing "Passing a command with a subcommand"
+    (let [result (argcmd "command" (list "command" "subcommand"))
+          expected "subcommand"]
+      (is (= expected result))))
+  (testing "Passing an empty list"
+    (let [result (argcmd "command" nil)
+          expected nil]
+      (is (= expected result)))))

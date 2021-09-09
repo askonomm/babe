@@ -3,7 +3,8 @@
             [clojure.instant :as inst]
             [clojure.java.io :as io]
             [markdown.core :as md])
-  (:import (java.io File)))
+  (:import (java.io File)
+           (clojure.lang PersistentList)))
 
 (defn triml
   "Trims the given `trim-char` from the left of `string`."
@@ -80,3 +81,16 @@
     (if (.isDirectory ^File file-in-dir)
       (delete-files-in-path! (.getPath ^File file-in-dir))
       (io/delete-file file-in-dir))))
+
+(defn argcmd
+  "Parses a given list of `args` for a `command` and returns
+  `true` if the command was found. If the command has a
+  subcommand provided, then it will return that instead."
+  [command ^PersistentList args]
+  (when (seq? args)
+    (let [index (.indexOf args command)]
+      (if-not (= -1 index)
+        (if-let [subcommand (nth args (+ index 1) nil)]
+          subcommand
+          true)
+        nil))))
