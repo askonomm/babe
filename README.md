@@ -40,6 +40,12 @@ To watch a Babe site, which means Babe will listen for any file changes and buil
 useful for developing), simply navigate to the directory where your Babe site is (where the babe.json file is) and
 run `babe watch`.
 
+### More
+
+- [Check out a sample site](https://github.com/askonomm/bien.ee)
+- [Creating content](https://github.com/askonomm/babe/blob/master/doc/content.md)
+- [Creating templating data](https://github.com/askonomm/babe/blob/master/doc/templating_data.md)
+
 ## Compile Babe yourself
 
 Requires Java 11+, leiningen 2+ and GraalVM with Native Image to be installed.
@@ -50,9 +56,3 @@ Requires Java 11+, leiningen 2+ and GraalVM with Native Image to be installed.
 
 Now you have a native binary that you can use. You can, of course, just use the JAR file as well
 via `java -jar babe.jar` if you want, thereby skipping step 3.
-
-## More
-
-- [Check out a sample site](https://github.com/askonomm/bien.ee)
-- [Creating content](https://github.com/askonomm/babe/blob/master/doc/content.md)
-- [Creating templating data](https://github.com/askonomm/babe/blob/master/doc/templating_data.md)
