@@ -14,7 +14,7 @@ curl -s https://raw.githubusercontent.com/askonomm/babe/master/installer.sh | ba
 
 You can then run babe as `./babe` or `./babe watch`, given that the Babe executable is in the current working directory.
 
-And to install globally, run:
+### Globally
 
 ```shell
 curl -s https://raw.githubusercontent.com/askonomm/babe/master/installer.sh | bash -s -- -g
