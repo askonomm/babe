@@ -249,11 +249,11 @@
   [base-directory]
   (doseq [file (scan-assets base-directory)]
     (let [write-dir (utils/trimr base-directory "/")
-          from ^File (io/file (:path file))
+          from (io/file (:path file))
           file-path (-> (:path file)
                         (str/replace base-directory "")
                         (utils/triml "/"))
-          to ^File (io/file (str write-dir "/public/" file-path))]
+          to (io/file (str write-dir "/public/" file-path))]
       (println "Copying" file-path)
       (io/make-parents (str write-dir "/public/" file-path))
       (io/copy from to))))
@@ -319,6 +319,8 @@
   (let [base-directory (or (utils/argcmd "dir" args) "./")]
     (cond (= true (utils/argcmd "init" args))
           (create-base-project! base-directory)
+
           (utils/argcmd "watch" args)
           (watch! base-directory)
+
           :else (build-and-exit! base-directory))))
