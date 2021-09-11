@@ -316,11 +316,16 @@
 
 (defn -main
   [& args]
-  (let [base-directory (or (utils/argcmd "dir" args) "./")]
-    (cond (= true (utils/argcmd "init" args))
+  (let [base-directory (or (utils/argcmd "dir" args) "./")
+        arg-init (utils/argcmd "init" args)
+        arg-watch (utils/argcmd "watch" args)]
+    (cond (= true arg-init)
           (create-base-project! base-directory)
 
-          (utils/argcmd "watch" args)
+          (string? arg-init)
+          (create-base-project! arg-init)
+
+          arg-watch
           (watch! base-directory)
 
           :else (build-and-exit! base-directory))))

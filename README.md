@@ -27,7 +27,7 @@ You can then run babe as `babe` or `babe watch` from anywhere.
 ### Quick start
 
 To get a quick start for your project, run `babe init` in a directory you want, and it will create
-the [base project](https://github.com/askonomm/babe-base-project) files for you in that directory.
+the [base project](https://github.com/askonomm/babe-base-project) files for you in that directory. If you want it to create a new directory for you, run `babe init {directory-name}` and it will do just that.
 
 ### Building
 
