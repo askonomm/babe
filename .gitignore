@@ -15,3 +15,4 @@ pom.xml.asc
 .idea/
 .eastwood
 .lsp/
+babe.build_artifacts.txt
