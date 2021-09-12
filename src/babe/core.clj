@@ -272,7 +272,8 @@
 (defn- build-and-exit!
   "Builds the static site in `base-directory` and exits."
   [base-directory]
-  (build! base-directory (get-config base-directory)))
+  (build! base-directory (get-config base-directory))
+  (System/exit 0))
 
 (defn- create-base-project-file!
   "Copies a given `stream` into `base-directory` based on `entry`."
