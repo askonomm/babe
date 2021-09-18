@@ -12,27 +12,15 @@
 
 (set! *warn-on-reflection* true)
 
+
 ; By default, Selmer escapes all HTML entities.
 ; We don't want that.
 (selmer.util/turn-off-escaping!)
 
-; This here may seem unused, but trust me, it isn't. Since we use
-; GraalVM to create a native binary of Babe, we need to provide it
-; a list of all packages so that it would know what to load for us
-; in the classpath. I use this var from the REPL to get a list of
-; those packages.
-(def ^:private packages
-  (->> (map ns-name (all-ns))
-       (remove #(str/starts-with? % "clojure"))
-       (map #(str/split (str %) #"\."))
-       (keep butlast)
-       (map #(str/join "." %))
-       distinct
-       (map munge)
-       (cons "clojure")))
 
 (def ^:private base-project-zip-url
   "https://github.com/askonomm/babe-base-project/archive/refs/heads/master.zip")
+
 
 (defn- scan-assets
   "Recursively scans a given `base-directory` for any asset files
@@ -51,6 +39,7 @@
                          (str/ends-with? current-path ".webp")
                          (.isDirectory ^File (io/file current-path)))))))
 
+
 (defn- scan-content
   "Recursively scans a given `base-directory` for any .md or .html
   files. The result of this is used for generating content files."
@@ -63,6 +52,7 @@
                          (str/ends-with? current-path ".sel")
                          (.isDirectory ^File (io/file current-path)))))))
 
+
 (defn- scan-watchlist
   "Recursively scans a given `base-directory` for any and all files,
   except those in the /public directory. The result of this is used
@@ -72,6 +62,7 @@
   (utils/scan base-directory
               (fn [read-dir current-path]
                 (not (= current-path (str read-dir "/public"))))))
+
 
 (defn- construct-content-item->md
   "Constructs the data structure for a Markdown file by taking the file
@@ -83,6 +74,7 @@
               (str/replace ".md" ""))
    :meta  (utils/parse-md-metadata contents)
    :entry (utils/parse-md-entry contents)})
+
 
 (defn- construct-content-item->sel
   "Constructs the data structure for a Selmer file. Unlike a
@@ -98,6 +90,7 @@
    :selmer   true
    :contents contents})
 
+
 (defn- construct-content-item
   "Build a content item depending on the extension of the file.
   Currently supports .md for Markdown and .sel for Selmer."
@@ -108,6 +101,7 @@
           (str/ends-with? path ".sel")
           (construct-content-item->sel base-directory path contents))))
 
+
 (defn- construct-content
   "Iterates over each scanned file and returns a collection of
   constructed content items."
@@ -115,6 +109,7 @@
   (pmap (fn [file]
           (construct-content-item base-directory file))
         (scan-content base-directory)))
+
 
 (defn- prepend-folder-to-content-item-path
   "Prepends a given `folder` to the :path of each of the items
@@ -124,6 +119,7 @@
          (merge content-item
                 {:path (str folder "/" (:path content-item))}))
        content))
+
 
 (defn- construct-templating-data-item
   "Builds a templating data item, which is a collection of content
@@ -143,6 +139,7 @@
        (= "desc" (:order data-item))
        (reverse))}))
 
+
 (defn- construct-templating-data
   "Builds the templating data from the given configuration and
   data-set defined in the babe.json file, allowing for pretty
@@ -151,6 +148,7 @@
   {:site (:site config)
    :data (into {} (map #(construct-templating-data-item base-directory %)
                        (:data config)))})
+
 
 (defn- get-template
   "Attempts to retrieve a given `template` from within the
@@ -162,6 +160,7 @@
         (slurp))
     (catch Exception _
       "")))
+
 
 (defn- get-config
   "Attempts to retrieve the `babe.json` contents and parse it
@@ -175,6 +174,7 @@
     (catch Exception _
       {})))
 
+
 (defn- write->sel!
   "Writes a Selmer template into the /public directory based on its
   path and filename of the file.
@@ -187,6 +187,7 @@
     (io/make-parents (str write-dir (:path content-item)))
     (spit (str write-dir (:path content-item)) to-write)))
 
+
 (defn- write->md!
   "Writes a Markdown file into the /public directory based on its
   path and filename of the file.
@@ -198,6 +199,7 @@
         to-write (selmer/render layout (merge data {:content content-item}))]
     (io/make-parents (str write-dir (:path content-item) "/index.html"))
     (spit (str write-dir (:path content-item) "/index.html") to-write)))
+
 
 (defn- write!
   "Writes a given `content-item` into the /public directory based on
@@ -214,12 +216,14 @@
     (write->sel! base-directory content-item data)
     (write->md! base-directory layout content-item data)))
 
+
 (defn- empty-public-dir!
   "Recursively deletes all files and directories from within the
   public directory."
   [base-directory]
   (-> (str (utils/trimr base-directory "/") "/public")
       (utils/delete-files-in-path!)))
+
 
 (defn- build-home!
   "Builds a home page / root page (index.html) into the /public
@@ -236,12 +240,14 @@
     (println "Building /")
     (write->sel! base-directory home-content-item home-data)))
 
+
 (defn- build-content!
   "Builds all the given `content` into the /public directory."
   [base-directory layout content data]
   (doseq [content-item content]
     (println "Building" (:path content-item))
     (write! base-directory layout content-item data)))
+
 
 (defn- copy-assets!
   "Copies all the assets from the `base-directory` to the
@@ -258,6 +264,7 @@
       (io/make-parents (str write-dir "/public/" file-path))
       (io/copy from to))))
 
+
 (defn- build!
   "Builds the static site in `base-directory` with `config`."
   [base-directory config]
@@ -269,11 +276,13 @@
     (build-content! base-directory layout content data)
     (copy-assets! base-directory)))
 
+
 (defn- build-and-exit!
   "Builds the static site in `base-directory` and exits."
   [base-directory]
   (build! base-directory (get-config base-directory))
   (System/exit 0))
+
 
 (defn- create-base-project-file!
   "Copies a given `stream` into `base-directory` based on `entry`."
@@ -286,6 +295,7 @@
                   (= path (str base-directory "/LICENSE.txt")))
       (io/make-parents path)
       (io/copy stream file))))
+
 
 (defn- create-base-project!
   "Download a `base-project-zip-url` and extracts the contents
@@ -301,6 +311,7 @@
           (create-base-project-file! directory stream entry)
           (recur (.getNextEntry stream)))))))
 
+
 (defn- watch!
   "Runs an infinite loop that checks every 1s for any changes
   to files, upon which it will call `(build!)`."
@@ -314,6 +325,7 @@
             (build! base-directory (get-config base-directory))
             (reset! watch-list new-watch-list))
           (Thread/sleep 1000))))))
+
 
 (defn -main
   [& args]

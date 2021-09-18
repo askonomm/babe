@@ -16,3 +16,5 @@ pom.xml.asc
 .eastwood
 .lsp/
 babe.build_artifacts.txt
+.clj-kondo/
+.calva/

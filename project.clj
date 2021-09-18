@@ -6,6 +6,7 @@
   :dependencies [[org.clojure/clojure "1.10.1"]
                  [org.clojure/data.json "2.4.0"]
                  [org.clojure/tools.logging "1.1.0"]
+                 [com.github.clj-easy/graal-build-time "0.1.0"]
                  [ch.qos.logback/logback-classic "1.1.3"]
                  [markdown-clj "1.10.6"]
                  [selmer "1.12.44"]
@@ -16,8 +17,7 @@
   :aliases
   {"native"
    ["shell"
-    "native-image" "--report-unsupported-elements-at-runtime"
-    "--initialize-at-build-time=clojure,selmer,flatland.ordered,org.httpkit,markdown,complete,clj_yaml,babe" "--no-fallback"
+    "native-image" "--report-unsupported-elements-at-runtime" "--no-fallback"
     "--initialize-at-run-time=org.httpkit.client.ClientSslEngineFactory\\$SSLHolder"
     "-jar" "./target/babe.jar"]}
   :min-lein-version "2.0.0"
@@ -26,4 +26,3 @@
   :repl-options {:init-ns babe.core}
   :aot [babe.core]
   :uberjar-name "babe.jar")
-;:profiles {:uberjar {:aot [babe.core]}})
