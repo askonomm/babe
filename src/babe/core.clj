@@ -1,6 +1,6 @@
 (ns babe.core
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+            [clojure.string :as string]
             [clojure.data.json :as json]
             [selmer.parser :as selmer]
             [selmer.util :as selmer.util]
@@ -8,7 +8,9 @@
             [org.httpkit.client :as client])
   (:gen-class)
   (:import (java.io File)
+           (java.time.format DateTimeFormatter)
            (java.util.zip ZipInputStream ZipEntry)))
+
 
 (set! *warn-on-reflection* true)
 
@@ -30,13 +32,13 @@
   (utils/scan base-directory
               (fn [read-dir current-path]
                 (and (not (= current-path (str read-dir "/public")))
-                     (or (str/ends-with? current-path ".css")
-                         (str/ends-with? current-path ".js")
-                         (str/ends-with? current-path ".png")
-                         (str/ends-with? current-path ".jpg")
-                         (str/ends-with? current-path ".jpeg")
-                         (str/ends-with? current-path ".gif")
-                         (str/ends-with? current-path ".webp")
+                     (or (string/ends-with? current-path ".css")
+                         (string/ends-with? current-path ".js")
+                         (string/ends-with? current-path ".png")
+                         (string/ends-with? current-path ".jpg")
+                         (string/ends-with? current-path ".jpeg")
+                         (string/ends-with? current-path ".gif")
+                         (string/ends-with? current-path ".webp")
                          (.isDirectory ^File (io/file current-path)))))))
 
 
@@ -48,8 +50,8 @@
               (fn [read-dir current-path]
                 (and (not (= current-path (str read-dir "/public")))
                      (not (= current-path (str read-dir "/layout.sel")))
-                     (or (str/ends-with? current-path ".md")
-                         (str/ends-with? current-path ".sel")
+                     (or (string/ends-with? current-path ".md")
+                         (string/ends-with? current-path ".sel")
                          (.isDirectory ^File (io/file current-path)))))))
 
 
@@ -69,9 +71,9 @@
   `contents` and parsing it for YAML metadata and Markdown data."
   [base-directory path contents]
   {:path  (-> path
-              (str/replace base-directory "")
+              (string/replace base-directory "")
               (utils/triml "/")
-              (str/replace ".md" ""))
+              (string/replace ".md" ""))
    :meta  (utils/parse-md-metadata contents)
    :entry (utils/parse-md-entry contents)})
 
@@ -84,9 +86,9 @@
   hence the :selmer part, so that the builder will know what to do."
   [base-directory path contents]
   {:path     (-> path
-                 (str/replace base-directory "")
+                 (string/replace base-directory "")
                  (utils/triml "/")
-                 (str/replace ".sel" ""))
+                 (string/replace ".sel" ""))
    :selmer   true
    :contents contents})
 
@@ -96,10 +98,11 @@
   Currently supports .md for Markdown and .sel for Selmer."
   [base-directory {:keys [path]}]
   (let [contents (slurp path)]
-    (cond (str/ends-with? path ".md")
-          (construct-content-item->md base-directory path contents)
-          (str/ends-with? path ".sel")
-          (construct-content-item->sel base-directory path contents))))
+    (cond
+      (string/ends-with? path ".md")
+      (construct-content-item->md base-directory path contents)
+      (string/ends-with? path ".sel")
+      (construct-content-item->sel base-directory path contents))))
 
 
 (defn- construct-content
@@ -111,33 +114,88 @@
         (scan-content base-directory)))
 
 
-(defn- prepend-folder-to-content-item-path
-  "Prepends a given `folder` to the :path of each of the items
+(defn- prepend-path-to-content-item-path
+  "Prepends a given `path` to the :path of each of the items
   in `content`"
-  [folder content]
+  [path content]
   (map (fn [content-item]
          (merge content-item
-                {:path (str folder "/" (:path content-item))}))
+                {:path (str path "/" (:path content-item))}))
        content))
+
+
+(defn- construct-templating-data-item-content-item
+  "Given a single `path`, it will then either retrieve a single content
+   item if the path ends with a .md extension, or it will retrieve all the
+   content it can find in a given directory if it does not contain a .md 
+   extension."
+  [base-directory path]
+  (let [path (-> path
+                 (utils/triml "/")
+                 (utils/trimr "/"))]
+    (if (string/ends-with? path ".md")
+      (construct-content-item base-directory {:path (str base-directory "/" path)})
+      (->> (construct-content (str base-directory "/" path))
+           (prepend-path-to-content-item-path path)))))
+
+
+(defn- construct-templating-data-item-content
+  "Turns given path(s) of `content` into actual content."
+  [base-directory content]
+  (if (vector? content)
+    (mapv #(construct-templating-data-item-content-item base-directory %)
+          content)
+    (construct-templating-data-item-content-item base-directory content)))
+
+
+(defn- group-content->date
+  "Given a #inst date as `val` and a date format pattern as `mod`, it 
+   will attempt to return the result of the date formatting."
+  [val mod]
+  (let [date (-> (.toInstant ^java.util.Date val)
+                 (.atZone (java.time.ZoneId/systemDefault))
+                 (.toLocalDateTime))
+        formatter (DateTimeFormatter/ofPattern mod)]
+    (.format formatter date)))
+
+(defn- group-content
+  "A grouping function passed to `group-by` that attempts to group content
+   by a given content-item metadata as `group-by`. Special form of `group-by` 
+   can be passed as well:
+   
+   `date|format` can be passed to group by date where the `format` can be any 
+   formatting string that Java's DateFormatter accepts, such as YYYY for a year,
+   dd for a day, and so forth."
+  [content-item group-by]
+  (let [key (if (string/includes? "|" group-by)
+              (first (string/split group-by #"|"))
+              group-by)
+        val (get-in content-item [:meta (keyword key)])
+        mod (when (string/includes? "|" group-by)
+              (last (string/split group-by #"|")))]
+    (if (nil? mod)
+      val
+      (cond
+        (= "date" key)
+        (group-content->date val mod)))))
 
 
 (defn- construct-templating-data-item
   "Builds a templating data item, which is a collection of content
-  items from a specified folder. Optionally sorted and ordered, and
-  returned as a key-value map to be consumed a Selmer template."
-  [base-directory data-item]
-  (let [folder (-> (:folder data-item)
-                   (utils/triml "/")
-                   (utils/trimr "/"))
-        content (->> (str (utils/trimr base-directory "/") "/" folder)
-                     (construct-content)
-                     (prepend-folder-to-content-item-path folder))]
-    {(keyword (:name data-item))
-     (cond->> content
-       (:sortBy data-item)
-       (sort-by #(get-in % [:meta (keyword (:sortBy data-item))]))
-       (= "desc" (:order data-item))
-       (reverse))}))
+  items from a specified path. Optionally sorted, ordered or grouped, and
+  returned as a key-value map to be consumed by a Selmer template."
+  [base-directory [k v]]
+  (let [content (construct-templating-data-item-content base-directory
+                                                        (:content v))]
+    {k (if (map? content)
+         content
+         (cond->> content
+           (:sortBy v)
+           (sort-by #(get-in % [:meta (keyword (:sortBy v))]))
+           (= "desc" (:order v))
+           (reverse)
+           (:groupBy v)
+           (group-by #(group-content % (:groupBy v)))))}))
 
 
 (defn- construct-templating-data
@@ -156,7 +214,7 @@
   return an empty string instead."
   [base-directory template]
   (try
-    (-> (str (utils/trimr base-directory "/") "/" template ".sel")
+    (-> (str base-directory "/" template ".sel")
         (slurp))
     (catch Exception _
       "")))
@@ -168,7 +226,7 @@
   map instead."
   [base-directory]
   (try
-    (-> (str (utils/trimr base-directory "/") "/babe.json")
+    (-> (str base-directory "/babe.json")
         (slurp)
         (json/read-str :key-fn keyword))
     (catch Exception _
@@ -183,7 +241,11 @@
   be rendered into the /public/about/john.html file."
   [base-directory content-item data]
   (let [write-dir (str (utils/trimr base-directory "/") "/public/")
-        to-write (selmer/render (:contents content-item) data)]
+        to-write (try
+                   (selmer/render (:contents content-item) data)
+                   (catch Exception e
+                     (println "There's an error with your Selmer template:")
+                     (println (:cause (Throwable->map e)))))]
     (io/make-parents (str write-dir (:path content-item)))
     (spit (str write-dir (:path content-item)) to-write)))
 
@@ -196,7 +258,11 @@
   be rendered into the /public/blog/hello-world/index.html file."
   [base-directory layout content-item data]
   (let [write-dir (str (utils/trimr base-directory "/") "/public/")
-        to-write (selmer/render layout (merge data {:content content-item}))]
+        to-write (try
+                   (selmer/render layout (merge data {:content content-item}))
+                   (catch Exception e
+                     (println "There's an error with your Selmer template:")
+                     (println (:cause (Throwable->map e)))))]
     (io/make-parents (str write-dir (:path content-item) "/index.html"))
     (spit (str write-dir (:path content-item) "/index.html") to-write)))
 
@@ -254,14 +320,12 @@
   /public directory."
   [base-directory]
   (doseq [file (scan-assets base-directory)]
-    (let [write-dir (utils/trimr base-directory "/")
-          from (io/file (:path file))
+    (let [from (io/file (:path file))
           file-path (-> (:path file)
-                        (str/replace base-directory "")
-                        (utils/triml "/"))
-          to (io/file (str write-dir "/public/" file-path))]
+                        (string/replace base-directory ""))
+          to (io/file (str base-directory "/public/" file-path))]
       (println "Copying" file-path)
-      (io/make-parents (str write-dir "/public/" file-path))
+      (io/make-parents (str base-directory "/public/" file-path))
       (io/copy from to))))
 
 
@@ -288,7 +352,7 @@
   "Copies a given `stream` into `base-directory` based on `entry`."
   [base-directory stream ^ZipEntry entry]
   (let [path (-> (str base-directory "/" (.getName entry))
-                 (str/replace "babe-base-project-master/" ""))
+                 (string/replace "babe-base-project-master/" ""))
         file (io/file path)]
     (when-not (or (.isDirectory entry)
                   (= path (str base-directory "/.gitignore"))
@@ -307,9 +371,8 @@
                          (ZipInputStream.))]
     (loop [entry (.getNextEntry stream)]
       (when entry
-        (let [directory (utils/trimr base-directory "/")]
-          (create-base-project-file! directory stream entry)
-          (recur (.getNextEntry stream)))))))
+        (create-base-project-file! base-directory stream entry)
+        (recur (.getNextEntry stream))))))
 
 
 (defn- watch!
@@ -329,16 +392,22 @@
 
 (defn -main
   [& args]
-  (let [base-directory (or (utils/argcmd "dir" args) "./")
+  (let [base-directory (if (utils/argcmd "dir" args)
+                         (-> (utils/argcmd "dir" args)
+                             (utils/triml "/")
+                             (utils/trimr "/"))
+                         "./")
         arg-init (utils/argcmd "init" args)
         arg-watch (utils/argcmd "watch" args)]
-    (cond (= true arg-init)
-          (create-base-project! base-directory)
-
-          (string? arg-init)
-          (create-base-project! arg-init)
-
-          arg-watch
-          (watch! base-directory)
-
-          :else (build-and-exit! base-directory))))
+    (cond
+      ; create a base project in the current dir
+      (= true arg-init)
+      (create-base-project! base-directory)
+      ; create a base project in specified dir
+      (string? arg-init)
+      (create-base-project! arg-init)
+      ; watch
+      arg-watch
+      (watch! base-directory)
+      ; build
+      :else (build-and-exit! base-directory))))
