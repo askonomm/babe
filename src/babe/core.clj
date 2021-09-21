@@ -241,7 +241,11 @@
   be rendered into the /public/about/john.html file."
   [base-directory content-item data]
   (let [write-dir (str (utils/trimr base-directory "/") "/public/")
-        to-write (selmer/render (:contents content-item) data)]
+        to-write (try
+                   (selmer/render (:contents content-item) data)
+                   (catch Exception e
+                     (println "There's an error with your Selmer template:")
+                     (println (:cause (Throwable->map e)))))]
     (io/make-parents (str write-dir (:path content-item)))
     (spit (str write-dir (:path content-item)) to-write)))
 
@@ -254,7 +258,11 @@
   be rendered into the /public/blog/hello-world/index.html file."
   [base-directory layout content-item data]
   (let [write-dir (str (utils/trimr base-directory "/") "/public/")
-        to-write (selmer/render layout (merge data {:content content-item}))]
+        to-write (try
+                   (selmer/render layout (merge data {:content content-item}))
+                   (catch Exception e
+                     (println "There's an error with your Selmer template:")
+                     (println (:cause (Throwable->map e)))))]
     (io/make-parents (str write-dir (:path content-item) "/index.html"))
     (spit (str write-dir (:path content-item) "/index.html") to-write)))
 
