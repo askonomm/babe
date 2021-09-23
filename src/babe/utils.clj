@@ -68,17 +68,17 @@
   the modified time of said file."
   [directory when-pred]
   (flatten
-   (for
-    [file (.list (io/file directory))
-     :let [read-dir (trimr directory "/")
-           path (str read-dir "/" file)]
-     :when (when-pred read-dir (string/lower-case path))]
-     (if (.isDirectory (io/file path))
-       (scan path when-pred)
-       {:path  (-> path
-                   (triml "/")
-                   (trimr "/"))
-        :mtime (.lastModified (io/file path))}))))
+    (for
+      [file (.list (io/file directory))
+       :let [read-dir (trimr directory "/")
+             path (str read-dir "/" file)]
+       :when (when-pred read-dir (string/lower-case path))]
+      (if (.isDirectory (io/file path))
+        (scan path when-pred)
+        {:path  (-> path
+                    (triml "/")
+                    (trimr "/"))
+         :mtime (.lastModified (io/file path))}))))
 
 
 (defn delete-files-in-path!
