@@ -392,7 +392,8 @@
 
 (defn -main
   [& args]
-  (let [base-directory (if (utils/argcmd "dir" args)
+  (let [base-directory (if (and (utils/argcmd "dir" args)
+                                (not (= "./" (utils/argcmd "dir" args))))
                          (-> (utils/argcmd "dir" args)
                              (utils/triml "/")
                              (utils/trimr "/"))
@@ -410,4 +411,5 @@
       arg-watch
       (watch! base-directory)
       ; build
-      :else (build-and-exit! base-directory))))
+      :else
+      (build-and-exit! base-directory))))
