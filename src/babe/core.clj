@@ -2,14 +2,16 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as string]
             [clojure.data.json :as json]
+            [clojure.java.shell :as sh]
             [selmer.parser :as selmer]
             [selmer.util :as selmer.util]
             [babe.utils :as utils]
             [org.httpkit.client :as client])
   (:gen-class)
-  (:import (java.io File)
-           (java.time.format DateTimeFormatter)
-           (java.util.zip ZipInputStream ZipEntry)))
+  (:import (java.time.format DateTimeFormatter)
+           (java.util.zip ZipInputStream ZipEntry)
+           (java.util Date)
+           (java.time ZoneId)))
 
 
 (set! *warn-on-reflection* true)
@@ -29,30 +31,25 @@
    like CSS, JS, images, etc. The result of this is used to know
    which files to copy to the /public directory."
   [base-directory]
-  (utils/scan base-directory
-              (fn [read-dir current-path]
-                (and (not (= current-path (str read-dir "/public")))
-                     (or (string/ends-with? current-path ".css")
-                         (string/ends-with? current-path ".js")
-                         (string/ends-with? current-path ".png")
-                         (string/ends-with? current-path ".jpg")
-                         (string/ends-with? current-path ".jpeg")
-                         (string/ends-with? current-path ".gif")
-                         (string/ends-with? current-path ".webp")
-                         (.isDirectory ^File (io/file current-path)))))))
-
+  (->> (utils/scan base-directory)
+       (filter (fn [{:keys [path]}]
+                 (and (not (string/starts-with? path (str base-directory "/public")))
+                      (not (= path (str base-directory "/layout.sel")))
+                      (not (= path (str base-directory "/babe.json")))
+                      (not (string/starts-with? path (str base-directory "/.")))
+                      (not (string/ends-with? path ".sel"))
+                      (not (string/ends-with? path ".md")))))))
 
 (defn- scan-content
   "Recursively scans a given `base-directory` for any .md or .html
   files. The result of this is used for generating content files."
   [base-directory]
-  (utils/scan base-directory
-              (fn [read-dir current-path]
-                (and (not (= current-path (str read-dir "/public")))
-                     (not (= current-path (str read-dir "/layout.sel")))
-                     (or (string/ends-with? current-path ".md")
-                         (string/ends-with? current-path ".sel")
-                         (.isDirectory ^File (io/file current-path)))))))
+  (->> (utils/scan base-directory)
+       (filter (fn [{:keys [path]}]
+                 (and (not (string/starts-with? path (str base-directory "/public")))
+                      (not (= path (str base-directory "/layout.sel")))
+                      (or (string/ends-with? path ".md")
+                          (string/ends-with? path ".sel")))))))
 
 
 (defn- scan-watchlist
@@ -61,17 +58,18 @@
   by the watcher to know when any file was modified, to then trigger
   a re-build."
   [base-directory]
-  (utils/scan base-directory
-              (fn [read-dir current-path]
-                (not (= current-path (str read-dir "/public"))))))
-
+  (->> (utils/scan base-directory)
+       (filter (fn [{:keys [path]}]
+                 (and (not (string/starts-with? path (str base-directory "/public")))
+                      (not (string/starts-with? path (str base-directory "/.")))
+                      (not (= path (str base-directory "/babe.json"))))))))
 
 (defn- construct-content-item->md
   "Constructs the data structure for a Markdown file by taking the file
   `contents` and parsing it for YAML metadata and Markdown data."
   [base-directory path contents]
   {:path  (-> path
-              (string/replace base-directory "")
+              (string/replace-first base-directory "")
               (utils/triml "/")
               (string/replace ".md" ""))
    :meta  (utils/parse-md-metadata contents)
@@ -80,13 +78,13 @@
 
 (defn- construct-content-item->sel
   "Constructs the data structure for a Selmer file. Unlike a
-  Markdown file, we will not be creating a index.html file to
+  Markdown file, we will not be creating an index.html file to
   put the rendered contents into, but rather just remove the .sel
   extension and create a file based on the content file name itself,
   hence the :selmer part, so that the builder will know what to do."
   [base-directory path contents]
   {:path     (-> path
-                 (string/replace base-directory "")
+                 (string/replace-first base-directory "")
                  (utils/triml "/")
                  (string/replace ".sel" ""))
    :selmer   true
@@ -95,7 +93,7 @@
 
 (defn- construct-content-item
   "Build a content item depending on the extension of the file.
-  Currently supports .md for Markdown and .sel for Selmer."
+  Currently, supports .md for Markdown and .sel for Selmer."
   [base-directory {:keys [path]}]
   (let [contents (slurp path)]
     (cond
@@ -152,8 +150,8 @@
   "Given a #inst date as `val` and a date format pattern as `mod`, it 
    will attempt to return the result of the date formatting."
   [val mod]
-  (let [date (-> (.toInstant ^java.util.Date val)
-                 (.atZone (java.time.ZoneId/systemDefault))
+  (let [date (-> (.toInstant ^Date val)
+                 (.atZone (ZoneId/systemDefault))
                  (.toLocalDateTime))
         formatter (DateTimeFormatter/ofPattern mod)]
     (.format formatter date)))
@@ -190,12 +188,12 @@
     {k (if (map? content)
          content
          (cond->> content
-           (:sortBy v)
-           (sort-by #(get-in % [:meta (keyword (:sortBy v))]))
-           (= "desc" (:order v))
-           (reverse)
-           (:groupBy v)
-           (group-by #(group-content % (:groupBy v)))))}))
+                  (:sortBy v)
+                  (sort-by #(get-in % [:meta (keyword (:sortBy v))]))
+                  (= "desc" (:order v))
+                  (reverse)
+                  (:groupBy v)
+                  (group-by #(group-content % (:groupBy v)))))}))
 
 
 (defn- construct-templating-data
@@ -269,7 +267,7 @@
 
 (defn- write!
   "Writes a given `content-item` into the /public directory based on
-  its path and filename of the file. Depending on whether or not it
+  its path and filename of the file. Depending on whether it
   is a Selmer template or a Markdown content file, a different
   strategy will be chosen.
 
@@ -288,7 +286,7 @@
   public directory."
   [base-directory]
   (-> (str (utils/trimr base-directory "/") "/public")
-      (utils/delete-files-in-path!)))
+      (utils/delete-files!)))
 
 
 (defn- build-home!
@@ -365,11 +363,14 @@
   "Download a `base-project-zip-url` and extracts the contents
   into `base-directory`."
   [base-directory]
+  (println "Creating base project ...")
   (with-open [stream (-> @(client/request {:url base-project-zip-url
                                            :as  :stream})
                          (:body)
                          (ZipInputStream.))]
     (loop [entry (.getNextEntry stream)]
+      (when-not entry
+        (println "... done"))
       (when entry
         (create-base-project-file! base-directory stream entry)
         (recur (.getNextEntry stream))))))
@@ -379,25 +380,25 @@
   "Runs an infinite loop that checks every 1s for any changes
   to files, upon which it will call `(build!)`."
   [base-directory]
-  (let [watch-list (atom (scan-watchlist base-directory))]
-    (println "Watching ...")
-    (future
-      (while true
-        (let [new-watch-list (scan-watchlist base-directory)]
-          (when (not (= @watch-list new-watch-list))
-            (build! base-directory (get-config base-directory))
-            (reset! watch-list new-watch-list))
-          (Thread/sleep 1000))))))
+  (println "Watching ...")
+  (loop [watch-list (scan-watchlist base-directory)
+         new-watch-list (scan-watchlist base-directory)]
+    (Thread/sleep 1000)
+    (when-not (= watch-list new-watch-list)
+      (build! base-directory (get-config base-directory)))
+    (recur new-watch-list
+           (scan-watchlist base-directory))))
 
 
 (defn -main
   [& args]
-  (let [base-directory (if (and (utils/argcmd "dir" args)
-                                (not (= "./" (utils/argcmd "dir" args))))
+  (let [current-directory (-> (:out (sh/sh "pwd"))
+                              (string/replace "\n" ""))
+        base-directory (if (utils/argcmd "dir" args)
                          (-> (utils/argcmd "dir" args)
-                             (utils/triml "/")
                              (utils/trimr "/"))
-                         "./")
+                         (-> current-directory
+                             (utils/trimr "/")))
         arg-init (utils/argcmd "init" args)
         arg-watch (utils/argcmd "watch" args)]
     (cond
