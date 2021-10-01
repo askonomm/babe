@@ -3,26 +3,25 @@
             [clojure.instant :as inst]
             [clojure.java.io :as io]
             [markdown.core :as md])
-  (:import (java.io File)
-           (clojure.lang PersistentList)))
+  (:import (clojure.lang PersistentList)))
 
 
 (defn triml
   "Trims the given `trim-char` from the left of `string`."
   [string trim-char]
-  (if (string/starts-with? string trim-char)
-    (-> (subs string 1)
-        (triml trim-char))
-    string))
+  (loop [string string]
+    (if (string/starts-with? string trim-char)
+      (recur (subs string 1))
+      string)))
 
 
 (defn trimr
   "Trims the given `trim-char` from the right of `string`."
   [string trim-char]
-  (if (string/ends-with? string trim-char)
-    (-> (subs string 0 (- (count string) 1))
-        (trimr trim-char))
-    string))
+  (loop [string string]
+    (if (string/ends-with? string trim-char)
+      (recur (subs string 0 (- (count string) 1)))
+      string)))
 
 
 (defn- parse-md-metadata-value-by-key
@@ -63,32 +62,33 @@
 
 
 (defn scan
-  "Scans a given `directory` according to `when-pred`, and
-  returns a list of maps containing the path of a file and
+  "Scans a given `directory` for any and all files (recursively)
+  and returns a list of maps containing the path of a file and
   the modified time of said file."
-  [directory when-pred]
-  (flatten
-   (for
-    [file (.list (io/file directory))
-     :let [read-dir (trimr directory "/")
-           path (str read-dir "/" file)]
-     :when (when-pred read-dir (string/lower-case path))]
-     (if (.isDirectory (io/file path))
-       (scan path when-pred)
-       {:path  (-> path
-                   (triml "/")
-                   (trimr "/"))
-        :mtime (.lastModified (io/file path))}))))
+  [directory]
+  (loop [paths (map str (.list (io/file directory)))
+         result []]
+    (let [path (first paths)
+          full-path (str (trimr directory "/") "/" path)]
+      (if (empty? paths)
+        result
+        (if (.isDirectory (io/file full-path))
+          (let [new-paths (map #(str path "/" %)
+                               (.list (io/file full-path)))]
+            (recur (concat (drop 1 paths) new-paths)
+                   result))
+          (recur (drop 1 paths)
+                 (conj result
+                       {:path  full-path
+                        :mtime (.lastModified (io/file full-path))})))))))
 
 
-(defn delete-files-in-path!
-  "Deletes all files and folders from within the given `path`,
-  but does not delete the path itself."
-  [path]
-  (doseq [file-in-dir (.listFiles (io/file path))]
-    (if (.isDirectory ^File file-in-dir)
-      (delete-files-in-path! (.getPath ^File file-in-dir))
-      (io/delete-file file-in-dir))))
+(defn delete-files!
+  "Deletes all files and folders from within the given `directory`,
+  but does not delete the directory itself."
+  [directory]
+  (doseq [{:keys [path]} (scan directory)]
+    (io/delete-file path)))
 
 
 (defn argcmd
