@@ -35,8 +35,13 @@
 (defn- parse-md-metadata-line
   "Parses each YAML metadata line into a map."
   [line]
-  (let [key (string/trim (first (string/split line #":")))
-        value (string/trim (second (string/split line #":")))]
+  (let [key (-> (string/split line #":")
+                first
+                string/trim)
+        value (->> (string/split line #":")
+                   next
+                   (string/join ":")
+                   string/trim)]
     {(keyword key)
      (parse-md-metadata-value-by-key value key)}))
 
