@@ -7,11 +7,11 @@
             [selmer.util :as selmer.util]
             [babe.utils :as utils]
             [org.httpkit.client :as client])
-  (:gen-class)
   (:import (java.time.format DateTimeFormatter)
            (java.util.zip ZipInputStream ZipEntry)
            (java.util Date)
-           (java.time ZoneId)))
+           (java.time ZoneId))
+  (:gen-class))
 
 
 (set! *warn-on-reflection* true)
