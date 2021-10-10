@@ -40,6 +40,7 @@
                       (not (string/ends-with? path ".sel"))
                       (not (string/ends-with? path ".md")))))))
 
+
 (defn- scan-content
   "Recursively scans a given `base-directory` for any .md or .html
   files. The result of this is used for generating content files."
@@ -63,6 +64,7 @@
                  (and (not (string/starts-with? path (str base-directory "/public")))
                       (not (string/starts-with? path (str base-directory "/.")))
                       (not (= path (str base-directory "/babe.json"))))))))
+
 
 (defn- construct-content-item->md
   "Constructs the data structure for a Markdown file by taking the file
@@ -155,6 +157,7 @@
                  (.toLocalDateTime))
         formatter (DateTimeFormatter/ofPattern mod)]
     (.format formatter date)))
+
 
 (defn- group-content
   "A grouping function passed to `group-by` that attempts to group content
